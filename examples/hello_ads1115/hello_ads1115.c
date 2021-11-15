@@ -4,45 +4,45 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/* MPR121 hello_mpr121 example.
-
-Whenever a sensor (electrode) is touched, the on-board LED lights on and the sensor number is printed.
-*/
-
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/i2c.h"
-
-// I2C definitions: port and pin numbers
-#define I2C_PORT i2c0
-#define I2C_SDA 8
-#define I2C_SCL 9
-
-
-// Include the ADS1115 library only after the definitions above.
 #include "ads1115.h"
 
-int main()
-{
+// #define ADS1115_I2C_PORT i2c0
+// const uint8_t ADS1115_I2C_ADDR = 0x48;
+#define I2C_FREQ 400000
+const uint8_t ADS1115_SDA_PIN = 12;
+const uint8_t ADS1115_SCL_PIN = 13;
+
+int main() {
     stdio_init_all();
 
-    // Initialise I2C.
-    i2c_init(I2C_PORT, ADS1115_I2C_FREQ);
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA);
-    gpio_pull_up(I2C_SCL);
+    // Initialise I2C
+    i2c_init(ADS1115_I2C_PORT, I2C_FREQ);
 
-    // Initialise the ADC.
-    ads1115_init();
-
-    // Initialise data variables.
+    // Initialise ADC
+    uint16_t config;
+    ads1115_init(ADS1115_SDA_PIN, ADS1115_SCL_PIN, &config);
     
-    while (1)
-    {
-        // Pause for these many ms.
-        sleep_ms(200);
-    }
+    // Modify the default configuration as needed. In this example the
+    // signal will be differential, measured between pins A0 and A3,
+    // and the full-scale voltage range is set to +/- 4.096 V.
+    ads1115_set_input_mux(&config, ADS1115_MUX_DIFF_0_3);
+    ads1115_set_pga(&config, ADS1115_PGA_4_096);
 
-    return 0;
+    // Write the configuration for this to have an effect.
+    ads1115_write_config(config);
+
+    // Data containers
+    float volts;
+    uint16_t adc_value;
+
+    while (1) {
+        // Read a value, convert to volts, and print.
+        ads1115_read_adc(&config, &adc_value);
+        volts = ads1115_raw_to_volts(&config, adc_value);
+        printf("ADC: %u  Voltage: %f\n", adc_value, volts);
+
+        sleep_ms(1000);
+    }
 }

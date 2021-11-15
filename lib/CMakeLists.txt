@@ -14,4 +14,5 @@ target_sources(pico-ads1115
   INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/ads1115.c
   ${CMAKE_CURRENT_LIST_DIR}/include/ads1115.h
+  ${CMAKE_CURRENT_LIST_DIR}/include/registers.h
 )
