@@ -6,41 +6,40 @@
 
 #include "ads1115.h"
 
-void ads1115_init(uint8_t sda_pin, uint8_t scl_pin, uint16_t *config){
-    gpio_set_function(sda_pin, GPIO_FUNC_I2C);
-    gpio_set_function(scl_pin, GPIO_FUNC_I2C);
-    gpio_pull_up(sda_pin);
-    gpio_pull_up(scl_pin);
-    ads1115_read_config(config);
+void ads1115_init(i2c_inst_t *i2c_port, uint8_t i2c_addr,
+                  ads1115_adc_t *adc) {
+    adc->i2c_port = i2c_port;
+    adc->i2c_addr = i2c_addr;
+    ads1115_read_config(adc);
 }
 
-void ads1115_read_adc(uint16_t *config, uint16_t *adc_value){
+void ads1115_read_adc(uint16_t *adc_value, ads1115_adc_t *adc){
     // If mode is single-shot, set bit 15 to start the conversion.
-    if ((*config & ADS1115_MODE_MASK) == ADS1115_MODE_SINGLE_SHOT){
-        *config |= 0x8000;//ADS1115_STATUS_START;
-        ads1115_write_config(*config);
+    if ((adc->config & ADS1115_MODE_MASK) == ADS1115_MODE_SINGLE_SHOT) {
+        adc->config |= 0x8000;//ADS1115_STATUS_START;
+        ads1115_write_config(adc);
 
         // Wait until the conversion finishes before reading the value
-        ads1115_read_config(config);
-        while (*config & ADS1115_STATUS_MASK == ADS1115_STATUS_BUSY){
-            ads1115_read_config(config);
+        ads1115_read_config(adc);
+        while (adc->config & ADS1115_STATUS_MASK == ADS1115_STATUS_BUSY){
+            ads1115_read_config(adc);
         }
     }
 
     // Now read the value from last conversion
     uint8_t dst[2];
-    i2c_write_blocking(ADS1115_I2C_PORT, ADS1115_I2C_ADDR,
+    i2c_write_blocking(adc->i2c_port, adc->i2c_addr,
                        &ADS1115_POINTER_CONVERSION, 1, true);
-    i2c_read_blocking(ADS1115_I2C_PORT, ADS1115_I2C_ADDR, &dst, 2,
+    i2c_read_blocking(adc->i2c_port, adc->i2c_addr, &dst, 2,
                       false);
     *adc_value = (dst[0] << 8) | dst[1];
 }
 
-float ads1115_raw_to_volts(uint16_t *config, uint16_t adc_value) {
+float ads1115_raw_to_volts(uint16_t adc_value, ads1115_adc_t *adc) {
     // Determine the full-scale voltage range (FSR) based on the 
     // PGA set in the configuration.
     float fsr;
-    uint16_t pga = *config & ADS1115_PGA_MASK;
+    uint16_t pga = adc->config & ADS1115_PGA_MASK;
     switch (pga) {
         case ADS1115_PGA_6_144:
             fsr = 6.144;
@@ -73,43 +72,44 @@ float ads1115_raw_to_volts(uint16_t *config, uint16_t adc_value) {
     return voltage;
 }
 
-void ads1115_read_config(uint16_t *config){
+void ads1115_read_config(ads1115_adc_t *adc){
     // Default configuration after power up should be 34179.
     // Default config with bit 15 cleared is 1411
     uint8_t dst[2];
-    i2c_write_blocking(ADS1115_I2C_PORT, ADS1115_I2C_ADDR,
+    i2c_write_blocking(adc->i2c_port, adc->i2c_addr,
                        &ADS1115_POINTER_CONFIGURATION, 1, true);
-    i2c_read_blocking(ADS1115_I2C_PORT, ADS1115_I2C_ADDR, &dst, 2,
+    i2c_read_blocking(adc->i2c_port, adc->i2c_addr, &dst, 2,
                       false);
-    *config = (dst[0] << 8) | dst[1];
+    adc->config = (dst[0] << 8) | dst[1];
 }
 
-void ads1115_write_config(uint16_t config){
+void ads1115_write_config(ads1115_adc_t *adc) {
     uint8_t src[3];
     src[0] = ADS1115_POINTER_CONFIGURATION;
-    src[1] = (uint8_t)(config >> 8);
-    src[2] = (uint8_t)(config & 0xff);
-    i2c_write_blocking(ADS1115_I2C_PORT, ADS1115_I2C_ADDR, &src, 3,
+    src[1] = (uint8_t)(adc->config >> 8);
+    src[2] = (uint8_t)(adc->config & 0xff);
+    i2c_write_blocking(adc->i2c_port, adc->i2c_addr, &src, 3,
                        false);
 }
 
-void ads1115_set_input_mux(uint16_t *config, enum ads1115_mux_t mux){
-    *config &= ~ADS1115_MUX_MASK;
-    *config |= mux;
+void ads1115_set_input_mux(enum ads1115_mux_t mux, ads1115_adc_t *adc) {
+    adc->config &= ~ADS1115_MUX_MASK;
+    adc->config |= mux;
 }
 
-void ads1115_set_pga(uint16_t *config, enum ads1115_pga_t pga){
-    *config &= ~ADS1115_PGA_MASK;
-    *config |= pga;
+void ads1115_set_pga(enum ads1115_pga_t pga, ads1115_adc_t *adc){
+    adc->config &= ~ADS1115_PGA_MASK;
+    adc->config |= pga;
 }
 
-void ads1115_set_operating_mode(uint16_t *config,
-                                enum ads1115_mode_t mode){
-    *config &= ~ADS1115_MODE_MASK;
-    *config |= mode;
+void ads1115_set_operating_mode(enum ads1115_mode_t mode,
+                                ads1115_adc_t *adc) {
+    adc->config &= ~ADS1115_MODE_MASK;
+    adc->config |= mode;
 }
 
-void ads1115_set_data_rate(uint16_t *config, enum ads1115_rate_t rate){
-    *config &= ~ADS1115_RATE_MASK;
-    *config |= rate;
+void ads1115_set_data_rate(enum ads1115_rate_t rate,
+                           ads1115_adc_t *adc) {
+    adc->config &= ~ADS1115_RATE_MASK;
+    adc->config |= rate;
 }
