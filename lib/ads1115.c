@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Antonio González
+ * Copyright (c) 2021-2022 Antonio González
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */

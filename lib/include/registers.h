@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021-2022 Antonio González
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #ifndef _REGISTERS_H_
 #define _REGISTERS_H_
 
