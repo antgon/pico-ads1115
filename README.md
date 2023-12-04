@@ -18,7 +18,7 @@ GND | GND
 
 ## Software
 
-1. Configure `CMakeLists.txt` in your base project to include the path to the **pico-mpr121** library. Add **pico-ads1115** to the list of target libraries. E.g. if the **pico-ads1115** library is located one directory above (`../`) the current one your `CMakeLists.txt` file should include
+1. Configure `CMakeLists.txt` in your base project to include the path to the **pico-ads1115** library. Add **pico-ads1115** to the list of target libraries. E.g. if the **pico-ads1115** library is located one directory above (`../`) the current one your `CMakeLists.txt` file should include
 ```cmake
 .
 .
